@@ -1,0 +1,247 @@
+% LaTeX 文書生成のために必要となる基礎的な機能を提供するファイル。
+
+% モジュール LaTeXBase の定義。ここではモジュール内に存在する変数・関数のうち
+% 一部のみを公開するため、明示的にシグネチャを記述している（sig 〜 end）。
+module LaTeXBase :> sig
+
+  % 段落・節
+  val +p : block [inline-text]
+  val +pn : block [inline-text]
+  val +section : block [?(label : string, number : bool) inline-text, block-text]
+  val +subsection : block [?(label : string, number : bool) inline-text, block-text]
+
+  % LaTeX コマンドのラッパー
+  val \textbf : inline [inline-text]
+  val \textit : inline [inline-text]
+  val \verb : inline [string]
+  val \ref : inline [string]
+  val \cite : inline [list string]
+
+  % itemize 環境
+  val +itemize : block [itemize]
+  val +enumerate : block [itemize]
+  val \itemize : inline [itemize]
+  val \enumerate : inline [itemize]
+
+  % code ブロック
+  val +code : block [string]
+  val \code : inline [string]
+
+  % 画像を意味する型。include-graphics 等によって生成される。
+  % ここではその実装を隠蔽するため、抽象型として定義している。
+  type figure :: o
+
+  % figure 環境
+  val include-graphics : ?(centering : bool, scale : float) string -> figure
+  val include-block : block-text -> figure
+  val with-caption : ?(label : string) inline-text -> figure -> figure
+  val \figure : inline [?(place : string) figure]
+  val +figure : block [?(place : string) figure]
+
+  val document : block-text -> string
+
+end = struct
+
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  % 各種ヘルパー関数
+  % 2024 年 9 月現在、Stdlib はテキスト出力モードに対応していないため、
+  % ここでは自前で定義している。
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  val option-from v opt =
+    match opt with
+    | Some x -> x
+    | None -> v
+    end
+
+  val rec list-length xs =
+    match xs with
+    | [] -> 0
+    | _ :: xs -> 1 + list-length xs
+    end
+
+  val rec list-map f xs = 
+    match xs with
+    | [] -> []
+    | x :: xs -> f x :: list-map f xs
+    end
+
+  val rec concat-string sep strs =
+    match strs with
+    | [] -> ` `
+    | [s] -> s
+    | s :: ss -> s ^ sep ^ concat-string sep ss
+    end
+  
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  % ブロック環境を作成するヘルパー関数
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  val b tinfo name inner =
+    break tinfo ^ break tinfo
+    ^ `\begin{` ^ name ^ `}`
+    ^ inner
+    ^ break tinfo
+    ^ `\end{` ^ name ^ `}`
+
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  % 基礎的なコマンド
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  % 通常の段落
+  val block tinfo +p it =
+    break tinfo ^ break tinfo ^ stringify-inline tinfo it
+
+  % インデントなしの段落
+  val block tinfo +pn it =
+    break tinfo ^ break tinfo
+    ^ `\noindent` ^ break tinfo
+    ^ stringify-inline tinfo it
+
+  % section 系コマンドのテンプレート
+  val section-scheme tinfo name labelopt numberopt title bt =
+    let stringified-title = stringify-inline tinfo title in
+    let title-cmd = match numberopt with
+    | Some false -> `\` ^ name ^ `*{` ^ stringified-title ^ `}`
+    | _ -> `\` ^ name ^ `{` ^ stringified-title ^ `}`
+    end in
+    let label-cmd = match labelopt with
+    | Some label -> `\label{` ^ label ^ `}`
+    | None -> ` `
+    end in
+    break tinfo ^ break tinfo
+    ^ title-cmd ^ label-cmd
+    ^ stringify-block tinfo bt
+
+  % section コマンド。参照用のラベルや節に番号を振るかどうかをオプション引数で指定できる
+  val block tinfo +section ?(label = labelopt, number = numberopt) title bt =
+    section-scheme tinfo `section` labelopt numberopt title bt
+
+  % subsection コマンド
+  val block tinfo +subsection ?(label = labelopt, number = numberopt) title bt =
+    section-scheme tinfo `subsection` labelopt numberopt title bt
+
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  % LaTeX コマンドのラッパー
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  val inline tinfo \break = `\\`
+  val inline tinfo \textbf it = `\textbf{` ^ stringify-inline tinfo it ^ `}`
+  val inline tinfo \textit it = `\textit{` ^ stringify-inline tinfo it ^ `}`
+  val inline tinfo \verb s = `\verb$` ^ s ^ `$`
+  val inline tinfo \ref label = `\ref{` ^ label ^ `}`
+  val inline tinfo \cite labels = `\cite{` ^ concat-string `,` labels ^ `}`
+
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  % itemize 環境
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  % itemize 系コマンドのテンプレート
+  val itemize-scheme tinfo label (Item(_, items)) =
+    let rec aux tinfo children =
+      let main =
+        let tinfo = tinfo |> deepen-indent 2 in
+        children
+        |> list-map (fun (Item(it, children)) ->
+            let this = `\item `# ^ stringify-inline tinfo it in
+            match children with
+            | [] -> break tinfo ^ this
+            | _ -> break tinfo ^ this ^ aux tinfo children
+            end
+          )
+        |> concat-string ` `
+      in
+      break tinfo
+      ^ `\begin{` ^ label ^ `}`
+      ^ main
+      ^ break tinfo
+      ^ `\end{` ^ label ^ `}`
+    in
+    aux tinfo items
+
+  val block tinfo +itemize item   = break tinfo ^ break tinfo ^ itemize-scheme tinfo `itemize` item
+  val block tinfo +enumerate item = break tinfo ^ break tinfo ^ itemize-scheme tinfo `enumerate` item
+
+  val inline tinfo \itemize item   = itemize-scheme tinfo `itemize` item ^ break tinfo
+  val inline tinfo \enumerate item = itemize-scheme tinfo `enumerate` item ^ break tinfo
+
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  % code ブロック
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  val code-scheme tinfo s =
+    `\begin{lstlisting}`
+    ^ s
+    ^ break tinfo
+    ^ `\end{lstlisting}`
+
+  val block tinfo +code s = break tinfo ^ break tinfo ^ code-scheme tinfo s
+  val inline tinfo \code s = code-scheme tinfo s ^ break tinfo
+
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  % figure
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  % 抽象型 figure の実体は text-info を受け取り文字列を返す関数
+  type figure = text-info -> string
+
+  % 画像ファイルを figure に変換する関数
+  val include-graphics ?(centering = centeringopt, scale = scaleopt) path tinfo =
+    let centering = centeringopt |> option-from false in
+    let scale = scaleopt |> option-from 1. in
+    let main =
+      `\includegraphics[keepaspectratio,scale=` ^ show-float scale ^ `]{` ^ path ^ `}`
+    in
+    if centering then
+      break tinfo ^ `\centering` ^ break tinfo ^ main
+    else
+      break tinfo ^ main
+
+  % ブロック要素を figure に変換する関数
+  val include-block bt tinfo =
+    stringify-block tinfo bt
+
+  val with-caption ?(label = labelopt) it fig tinfo =
+    let main = fig tinfo ^ break tinfo ^ `\caption{` ^ stringify-inline tinfo it ^ `}` in
+    match labelopt with
+    | Some label -> main ^ break tinfo ^ `\label{` ^ label ^ `}`
+    | None       -> main
+    end
+
+  val figure tinfo placeopt inner =
+    break tinfo ^ break tinfo
+    ^ `\begin{figure}[` ^ (placeopt |> option-from `h`) ^ `]`
+    ^ inner (deepen-indent 2 tinfo)
+    ^ break tinfo
+    ^ `\end{figure}`
+
+  val inline tinfo \figure ?(place = placeopt) inner =
+    figure tinfo placeopt inner
+
+  val block tinfo +figure ?(place = placeopt) inner =
+    break tinfo ^ break tinfo ^ figure tinfo placeopt inner
+
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  % document
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  val document bt =
+    % A function to determine how to output superscript and subscript in formulae;
+    % SATySFi converts single quotes in formulae into prime symbols, which are restored here.
+    let output-scripts base sub-opt sup-opt =
+      match (sub-opt, sup-opt) with
+      | (None, None)         -> base
+      | (Some sub, None)     -> base ^ `_{` ^ sub ^ `}`
+      | (None, Some sup)     -> if string-same sup `′` then base ^ `'` else base ^ `^{` ^ sup ^ `}`
+      | (Some sub, Some sup) ->
+          if string-same sup `′` then
+            base ^ `'_{` ^ sub ^ `}`
+          else
+            base ^ `_{` ^ sub ^ `}^{` ^ sup ^ `}`
+      end
+    in
+    let inline tinfo \math mt = `$` ^ stringify-math tinfo mt ^ `$` in
+    let tinfo = get-initial-text-info (command \math) output-scripts in
+    stringify-block tinfo bt
+
+end

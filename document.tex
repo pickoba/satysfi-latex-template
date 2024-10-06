@@ -1,0 +1,47 @@
+% PDF 生成時のテンプレートファイル。SATySFi で生成した文書本体（main.tex）を読み込んでコンパイルする。
+\documentclass[uplatex]{jsarticle}
+
+% パッケージの読み込み
+\usepackage{amsmath,amssymb}
+\usepackage{framed,color}
+\usepackage[dvipdfmx]{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{upquote}
+
+% パッケージの設定
+\lstset{
+  basicstyle={\ttfamily},
+  identifierstyle={\small},
+  commentstyle={\smallitshape},
+  keywordstyle={\small\bfseries},
+  ndkeywordstyle={\small},
+  stringstyle={\small\ttfamily},
+  frame={tb},
+  breaklines=true,
+  columns=[l]{fullflexible},
+  numbers=left,
+  xrightmargin=0zw,
+  xleftmargin=1.5zw,
+  numberstyle={\scriptsize},
+  stepnumber=1,
+  numbersep=1zw,
+  lineskip=-0.5ex,
+  keepspaces=true,
+  captionpos=b,
+}
+
+% コマンドの定義。SATySFi 文書中でのみ利用するコマンドは local.satyh-latex で定義する方が望ましいが、
+% \title にも利用するため、ここで定義している。
+\newcommand{\SATySFi}{SAT\kern-.2em\lower.5ex\hbox{Y}SF\kern-.0667em\lower.5ex\hbox{I}}
+
+\title{\SATySFi\ \LaTeX\ Template}
+\author{pickoba}
+
+\begin{document}
+
+\maketitle
+
+\input{main}
+
+\end{document}

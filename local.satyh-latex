@@ -1,0 +1,18 @@
+module Local = struct
+
+  val inline \no-proof = {証明は読者の演習問題とする。}
+
+  val inline tinfo \LaTeX = `\LaTeX `#
+  val inline tinfo \SATySFi = `\SATySFi `#
+
+  val inline tinfo \href url text =
+    `\href{` ^ url ^ `}{` ^ stringify-inline tinfo text ^ `}`
+
+  val block tinfo +framed bt =
+    break tinfo ^ break tinfo
+    ^ `\begin{oframed}`
+    ^ stringify-block (deepen-indent 2 tinfo) bt
+    ^ break tinfo
+    ^ `\end{oframed}`
+
+end

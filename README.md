@@ -1,0 +1,1 @@
+# SATySFi LaTeX Template

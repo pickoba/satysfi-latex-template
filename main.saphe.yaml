@@ -1,0 +1,12 @@
+saphe: "^0.1.0-alpha.1"
+satysfi: "^0.1.0-alpha.1"
+authors:
+  - "pickoba"
+registries:
+  - name: "default"
+    git:
+      url: "https://github.com/SATySFi/default-registry"
+      branch: "temp-dev-saphe"
+contents:
+  document: {}
+dependencies: []

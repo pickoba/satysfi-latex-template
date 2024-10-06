@@ -1,0 +1,16 @@
+{
+	"name": "SATySFi + LaTeX",
+	"build": {
+		"context": ".",
+		"dockerfile": "./Dockerfile"
+	},
+	"remoteUser": "vscode",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"tomoki1207.pdf",
+				"pickoba.satysfi-workshop"
+			]
+		}
+	}
+}

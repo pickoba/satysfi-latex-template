@@ -1,0 +1,15 @@
+# SATySFi
+*.satysfi-aux
+*.satysfi-deps.yaml
+_build
+
+# LaTeX
+*.aux
+*.bbl
+*.blg
+*.dvi
+*.log
+*.toc
+*.out
+*.lof
+*.lot

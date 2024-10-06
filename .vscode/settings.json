@@ -1,0 +1,7 @@
+{
+    "satysfi-workshop.executable": "./build.sh",
+    "satysfi-workshop.build.buildOptions": ["build"],
+    "satysfi-workshop.typecheck.when": "onSave",
+    "satysfi-workshop.typecheck.buildOptions": ["typecheck"],
+    "satysfi-workshop.languageServer.enabled": false,
+}
