@@ -4,4 +4,7 @@
     "satysfi-workshop.typecheck.when": "onSave",
     "satysfi-workshop.typecheck.buildOptions": ["typecheck"],
     "satysfi-workshop.languageServer.enabled": false,
+
+    // LaTeX Workshop の自動ビルドは SATySFi Workshop と競合するため無効化
+    "latex-workshop.latex.autoBuild.run": "never",
 }
